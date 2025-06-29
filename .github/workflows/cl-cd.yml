@@ -2,8 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-and-deploy:
@@ -23,24 +22,16 @@ jobs:
           npm install
           npx eslint . || true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            notshuffle/devops_project01:latest
-            notshuffle/devops_project01:${{ github.sha }}
+      - name: Build & Push Docker image
+        run: |
+          docker build -t notshuffle/nodeapp:latest .
+          docker push notshuffle/nodeapp:latest
 
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -49,7 +40,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull notshuffle/devops_project01:latest
-            docker stop devops_app || true
-            docker rm devops_app || true
-            docker run -d --name devops_app -p 5050:5050 notshuffle/devops_project01:latest
+            docker pull notshuffle/nodeapp:latest
+            docker stop nodeapp || true
+            docker rm nodeapp || true
+            docker run -d --name nodeapp -p 5050:5050 notshuffle/nodeapp:latest
